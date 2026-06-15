@@ -1,0 +1,68 @@
+services:
+  # Redis instance for the task broker
+  - type: redis
+    name: sentinel-redis
+    ipAllowList: [] # Allows internal connections
+    plan: free
+
+  # FastAPI Backend Service
+  - type: web
+    name: sentinel-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    region: oregon
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: sentinel-redis
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: "['*']" # Update to specific frontend URL once known
+      - key: SPLUNK_HOST
+        sync: false
+      - key: SPLUNK_TOKEN
+        sync: false
+      - key: SPLUNK_ML_ENDPOINT
+        sync: false
+      - key: SPLUNK_ML_TOKEN
+        sync: false
+      - key: VIRUSTOTAL_API_KEY
+        sync: false
+      - key: ALIENVAULT_API_KEY
+        sync: false
+
+  # Celery Background Worker
+  - type: worker
+    name: sentinel-celery-worker
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerCommand: celery -A app.core.celery_app worker --loglevel=info
+    region: oregon
+    plan: free
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: sentinel-redis
+          property: connectionString
+      - key: SPLUNK_HOST
+        sync: false
+      - key: SPLUNK_TOKEN
+        sync: false
+
+  # Next.js Frontend Dashboard
+  - type: web
+    name: sentinel-frontend
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    region: oregon
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: sentinel-backend
+          property: url
