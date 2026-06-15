@@ -4,7 +4,7 @@ from typing import List
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SENTINEL_API"
     API_V1_STR: str = "/api/v1"
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: List[str] = ["*"]
     
     # Celery & Redis
     REDIS_URL: str = "redis://localhost:6379/0"
