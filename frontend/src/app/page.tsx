@@ -5,11 +5,64 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldAlert, Activity, CheckCircle2, AlertTriangle, Cpu, Terminal, ExternalLink } from "lucide-react";
+import { ShieldAlert, Activity, CheckCircle2, AlertTriangle, Cpu, Terminal, ExternalLink, Play, TerminalSquare } from "lucide-react";
 
 export default function Dashboard() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, autoResolved: 0, activeInvestigations: 0 });
+  const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const simulateAttack = async () => {
+    if (isSimulating) return;
+    setIsSimulating(true);
+    setTerminalLogs([]);
+
+    const sequence = [
+      "> Initializing SENTINEL Attack Simulator...",
+      "> Compiling ransomware dropper payload...",
+      "> Target acquired: 10.0.1.55",
+      "> Executing simulated Splunk Webhook...",
+    ];
+
+    for (let i = 0; i < sequence.length; i++) {
+      setTerminalLogs(prev => [...prev, sequence[i]]);
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const payload = {
+        sid: "DEMO-" + Math.floor(Math.random() * 10000),
+        search_name: "Ransomware Behavior Detected",
+        app: "search",
+        owner: "admin",
+        results_link: "https://prd-p-3icdn.splunkcloud.com",
+        result: {
+          src_ip: "185.156.73.14",
+          dest_ip: "10.0.1.55",
+          user: "system",
+          action: "multiple_file_encryptions"
+        }
+      };
+
+      const response = await fetch(`${apiUrl}/api/v1/webhook/splunk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        setTerminalLogs(prev => [...prev, "> [HTTP 200] Webhook accepted by Render Backend.", "> Awaiting Autonomous Agent response..."]);
+      } else {
+        setTerminalLogs(prev => [...prev, "> [HTTP Error] Failed to send webhook."]);
+      }
+    } catch (e) {
+      setTerminalLogs(prev => [...prev, "> [Network Error] Could not reach backend. Check CORS or URL."]);
+    }
+    
+    setTimeout(() => setIsSimulating(false), 2000);
+  };
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -94,6 +147,38 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Attack Simulator Terminal */}
+      <Card className="bg-black border-neutral-800 mb-8 font-mono relative overflow-hidden group shadow-[0_0_30px_-5px_rgba(16,185,129,0.1)]">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-transparent opacity-50"></div>
+        <CardHeader className="pb-2 border-b border-neutral-900 bg-neutral-950 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-medium text-emerald-500 flex items-center gap-2">
+            <TerminalSquare className="h-4 w-4" />
+            ATTACK SIMULATOR TERMINAL
+          </CardTitle>
+          <button 
+            onClick={simulateAttack}
+            disabled={isSimulating}
+            className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 px-4 py-1.5 rounded text-xs font-bold transition-all disabled:opacity-50 border border-emerald-500/20 cursor-pointer"
+          >
+            <Play className="h-3 w-3 fill-emerald-500" />
+            {isSimulating ? "DEPLOYING..." : "DEPLOY RANSOMWARE"}
+          </button>
+        </CardHeader>
+        <CardContent className="pt-4 min-h-[120px] text-sm text-emerald-400/90 leading-relaxed">
+          {terminalLogs.length === 0 ? (
+            <div className="opacity-50 text-neutral-500">root@kali:~# Waiting for command execution...</div>
+          ) : (
+            <div className="space-y-1">
+              <div className="text-emerald-500/50 mb-2">root@kali:~# ./ransomware_dropper.sh --target 10.0.1.55</div>
+              {terminalLogs.map((log, i) => (
+                <div key={i} className="animate-in fade-in slide-in-from-bottom-1">{log}</div>
+              ))}
+              {isSimulating && <div className="animate-pulse inline-block w-2 h-4 bg-emerald-500 ml-1 translate-y-1"></div>}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Latest Incident Deep Dive */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
