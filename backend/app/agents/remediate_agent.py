@@ -39,9 +39,9 @@ class RemediateAgent(BaseAgent):
             })
             playbook = "False Positive Triage"
 
-        # Send Discord Notification if Webhook is configured
-        if is_malicious and settings.DISCORD_WEBHOOK_URL:
-            self._notify_discord(context, playbook)
+        # Send Telegram Notification if configured
+        if is_malicious and settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID:
+            self._notify_telegram(context, playbook)
 
         return {
             "agent": self.name,
@@ -50,22 +50,26 @@ class RemediateAgent(BaseAgent):
             "remediation_summary": f"Executed {playbook}. Actions: {len(actions_taken)}."
         }
         
-    def _notify_discord(self, context: Dict[str, Any], playbook: str):
+    def _notify_telegram(self, context: Dict[str, Any], playbook: str):
         import requests
         try:
             ip = context.get("observables", {}).get("src_ip", "Unknown")
+            severity = str(context.get("ml_analysis", {}).get("severity_score", "Unknown"))
+            
+            message = (
+                f"🚨 *CRITICAL SECURITY ALERT* 🚨\n\n"
+                f"*Malicious Activity Detected from IP:* `{ip}`\n"
+                f"*Severity Score:* {severity}\n"
+                f"*Playbook Initiated:* {playbook}\n"
+                f"*Status:* Awaiting Human Approval to Isolate"
+            )
+            
+            url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
             payload = {
-                "content": "🚨 **CRITICAL SECURITY ALERT: SENTINEL AUTONOMOUS TRIAGE** 🚨",
-                "embeds": [{
-                    "title": f"Malicious Activity Detected from IP: {ip}",
-                    "color": 15158332, # Red
-                    "fields": [
-                        {"name": "Playbook Initiated", "value": playbook, "inline": False},
-                        {"name": "Severity", "value": str(context.get("ml_analysis", {}).get("severity_score", "Unknown")), "inline": True},
-                        {"name": "Status", "value": "Awaiting Human Approval to Isolate", "inline": True}
-                    ]
-                }]
+                "chat_id": settings.TELEGRAM_CHAT_ID,
+                "text": message,
+                "parse_mode": "Markdown"
             }
-            requests.post(settings.DISCORD_WEBHOOK_URL, json=payload, timeout=5)
+            requests.post(url, json=payload, timeout=5)
         except Exception as e:
-            print(f"Failed to send Discord notification: {e}")
+            print(f"Failed to send Telegram notification: {e}")

@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     ALIENVAULT_API_KEY: str = ""
     
     # Notifications
-    DISCORD_WEBHOOK_URL: str = ""
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
 
     class Config:
         env_file = ".env"
