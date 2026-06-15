@@ -21,5 +21,6 @@ if settings.CORS_ORIGINS:
 app.include_router(endpoints.router, prefix=settings.API_V1_STR)
 
 @app.get("/health")
+@app.get("/api/v1/health")
 def health_check():
     return {"status": "ok"}
