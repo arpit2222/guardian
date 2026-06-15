@@ -13,6 +13,8 @@ class SplunkService:
 
     def _connect(self):
         try:
+            import socket
+            socket.setdefaulttimeout(15)
             if self.token:
                 return client.connect(
                     host=self.host,
