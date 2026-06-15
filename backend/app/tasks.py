@@ -9,8 +9,7 @@ import redis
 
 redis_client = redis.from_url(settings.REDIS_URL)
 
-@celery_app.task(name="app.tasks.process_splunk_alert", bind=True, max_retries=3)
-def process_splunk_alert(self, alert_data: dict):
+def process_splunk_alert(alert_data: dict):
     """
     Main orchestration task.
     Flow: Triage -> Investigate -> Remediate
@@ -55,5 +54,4 @@ def process_splunk_alert(self, alert_data: dict):
         return final_report
         
     except Exception as exc:
-        # In a real app, log the error here
-        raise self.retry(exc=exc, countdown=5)
+        print(f"Error processing alert: {exc}")

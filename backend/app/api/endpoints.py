@@ -12,19 +12,16 @@ class AlertPayload(BaseModel):
     app: str = "search"
 
 @router.post("/webhook/splunk")
-async def splunk_webhook(alert: AlertPayload, request: Request):
+async def splunk_webhook(alert: AlertPayload, request: Request, background_tasks: BackgroundTasks):
     """
     Endpoint to receive alerts from Splunk via Webhook.
     """
-    # In a real scenario, you'd validate the request token/signature here
-    
-    # We dispatch the alert to our Celery task queue for asynchronous processing
-    task = process_splunk_alert.delay(alert.model_dump())
+    # We dispatch the alert to FastAPI's built-in background tasks queue
+    background_tasks.add_task(process_splunk_alert, alert.model_dump())
     
     return {
         "status": "accepted",
-        "message": "Alert received and dispatched for processing",
-        "task_id": task.id
+        "message": "Alert received and dispatched for background processing"
     }
 
 import redis
